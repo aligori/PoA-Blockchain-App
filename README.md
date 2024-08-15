@@ -1,8 +1,8 @@
-# Blockchain Application using Ethereum Proof of Authority - Voting Application
+## Blockchain Application using Ethereum PoA
 
 The purpose of this project is the realization of a demo blockchain application using PoA that serves as a voting platform for the board members of an organization.
 
-## Tech Stack
+### Tech Stack
 1. Private Blockchain Network
     - Ethereum Client: `Geth`
     - Consensus Mechanism: `Clique` (PoA)
@@ -14,10 +14,10 @@ The purpose of this project is the realization of a demo blockchain application 
     - `Ethers.js`
     - `TailwindCss`
 
-## Prerequisites
+### Prerequisites
     Docker
 
-## Project setup
+### Project setup
 1. Navigate to the project source code directory: `cd /code`
 2. Build and start the containers: `docker-compose up --build` (or `docker-compose build` then `docker-compose up`). 
     
