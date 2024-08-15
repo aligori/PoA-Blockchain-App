@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.ReactCollapse--collapse {
+  transition: height 500ms;
+}
+
+
+.modal-background {
+  transition: opacity 0.3s ease-in-out;
+}
+
+.modal-open {
+  animation: modal-open-animation 0.2s ease forwards;
+}
+
+@keyframes modal-open-animation {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+

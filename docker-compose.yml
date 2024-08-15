@@ -1,0 +1,184 @@
+version: "3.8"
+
+services:
+  bootnode:
+    hostname: bootnode
+    env_file:
+      - .env
+    volumes:
+      - bootnode-vol:/root
+    build:
+      context: ./ethereum
+      dockerfile: bootnode/Dockerfile
+    command: >
+      --nodekeyhex=${NODEKEY_HEX}
+      --ipcdisable
+      --networkid=${NETWORK_ID}
+      --port=${NETWORK_PORT}
+      --netrestrict="172.16.254.0/28"
+      --nat extip:172.16.254.10
+    networks:
+      private-ethereum-network:
+        ipv4_address: 172.16.254.10
+
+  validator-node-1:
+    hostname: validator-node-1
+    env_file:
+      - .env
+    volumes:
+      - validator-node-1-vol:/root
+    depends_on:
+      - bootnode
+    build:
+      context: ./ethereum
+      dockerfile: validator/Dockerfile
+      args:
+        - ACCOUNT_PASSWORD=${ACCOUNT_PASSWORD_1}
+    command: >
+      --bootnodes="enode://${ENODE}@${BOOTNODE_IP}:${NETWORK_PORT}"
+      --preload="/root/scripts/automine.js"
+      --mine
+      --miner.etherbase ${SIGNER_ADDRESS_1}
+      --miner.gasprice "0"
+      --unlock ${SIGNER_ADDRESS_1} --password password.txt
+      --networkid=${NETWORK_ID}
+      --netrestrict="172.16.254.0/28"
+      --nat extip:172.16.254.11
+      --syncmode full
+    networks:
+      private-ethereum-network:
+        ipv4_address: 172.16.254.11
+
+  validator-node-2:
+    hostname: validator-node-2
+    env_file:
+      - .env
+    volumes:
+      - validator-node-2-vol:/root
+    depends_on:
+      - bootnode
+    build:
+      context: ./ethereum
+      dockerfile: validator/Dockerfile
+      args:
+        - ACCOUNT_PASSWORD=${ACCOUNT_PASSWORD_2}
+    command: >
+      --bootnodes="enode://${ENODE}@${BOOTNODE_IP}:${NETWORK_PORT}"
+      --preload="/root/scripts/automine.js"
+      --mine
+      --miner.etherbase ${SIGNER_ADDRESS_2}
+      --miner.gasprice "0"
+      --unlock ${SIGNER_ADDRESS_2} --password password.txt
+      --networkid=${NETWORK_ID}
+      --netrestrict="172.16.254.0/28"
+      --nat extip:172.16.254.12
+      --syncmode full
+    networks:
+      private-ethereum-network:
+        ipv4_address: 172.16.254.12
+
+  validator-node-3:
+    hostname: validator-node-3
+    env_file:
+      - .env
+    volumes:
+      - validator-node-3-vol:/root
+    depends_on:
+      - bootnode
+    build:
+      context: ./ethereum
+      dockerfile: validator/Dockerfile
+      args:
+        - ACCOUNT_PASSWORD=${ACCOUNT_PASSWORD_3}
+    command: >
+      --bootnodes="enode://${ENODE}@${BOOTNODE_IP}:${NETWORK_PORT}"
+      --preload="/root/scripts/automine.js"
+      --mine
+      --miner.etherbase ${SIGNER_ADDRESS_3}
+      --miner.gasprice "0"
+      --unlock ${SIGNER_ADDRESS_3} --password password.txt
+      --networkid=${NETWORK_ID}
+      --netrestrict="172.16.254.0/28"
+      --nat extip:172.16.254.14
+      --syncmode full
+    networks:
+      private-ethereum-network:
+        ipv4_address: 172.16.254.14
+
+  json-rpc-node-1:
+    hostname: json-rpc-node-1
+    env_file:
+      - .env
+    volumes:
+      - json-rpc-vol:/root
+    depends_on:
+      - bootnode
+    build:
+      context: ./ethereum
+      dockerfile: rpc/Dockerfile
+    command: >
+      --bootnodes="enode://${ENODE}@${BOOTNODE_IP}:${NETWORK_PORT}"
+      --allow-insecure-unlock
+      --http
+      --http.addr="0.0.0.0"
+      --http.api="eth,web3,net,admin,personal"
+      --http.corsdomain="*"
+      --networkid=${NETWORK_ID}
+      --netrestrict="172.16.254.0/28"
+      --nat extip:172.16.254.13
+      --syncmode full
+    ports:
+      - "${RPC_PORT}:${RPC_PORT}"
+      - "${WS_PORT}:${WS_PORT}"
+    networks:
+      private-ethereum-network:
+        ipv4_address: 172.16.254.13
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${RPC_PORT}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  deployer:
+    container_name: voting-app-contract-deployer
+    build:
+      context: ./dApp
+    env_file:
+      - .env
+    depends_on:
+      json-rpc-node-1:
+        condition: service_healthy
+    volumes:
+      - ./dApp/ignition:/app/ignition
+      - ./frontend/src/contracts:/app/deployed
+    networks:
+      private-ethereum-network:
+        ipv4_address: 172.16.254.9
+
+  frontend:
+    container_name: voting-app-frontend
+    build:
+      context: ./frontend
+    ports:
+      - 3000:3000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      deployer:
+        condition: service_completed_successfully
+
+networks:
+  private-ethereum-network:
+    driver: bridge
+    ipam:
+      config:
+      - subnet: 172.16.254.0/28
+
+volumes:
+  bootnode-vol:
+  json-rpc-vol:
+  validator-node-1-vol:
+  validator-node-2-vol:
+  validator-node-3-vol:
